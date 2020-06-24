@@ -4,7 +4,8 @@
     "type": "library",
     "require": {
         "php": ">=5.6.4",
-        "laravel/framework": ">=5.4.0"
+        "laravel/framework": ">=5.4.0",
+        "bheller/images-generator": "^1.0"
     },
     "license": "MIT",
     "authors": [
@@ -21,7 +22,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "RootInc\\LaravelS3FileModel\\S3FileModelProvider"
+                "RootInc\\LaravelS3FileModel\\FileModelProvider"
             ]
         }
     }

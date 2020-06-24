@@ -142,7 +142,7 @@ class FileModel extends Model
 
     //S3 METHODS ONLY
 
-    protected static function authorizeS3Upload($path, $acl = 'private')
+    protected static function authorizeS3Upload($relative_path, $acl = 'private')
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
@@ -154,7 +154,7 @@ class FileModel extends Model
 
         $cmd = $s3Client->getCommand('PutObject', [
             'Bucket' => getenv('AWS_BUCKET'),
-            'Key' => getenv('AWS_UPLOAD_FOLDER') . $path,
+            'Key' => getenv('AWS_UPLOAD_FOLDER') . $relative_path,
             'ACL' => $acl
         ]);
 
