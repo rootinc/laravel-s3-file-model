@@ -15,9 +15,23 @@ class FileModelServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole())
         {
+            //app_path()
+
+            //database_path('factories/UserFactory.php');
+
+            //base_path('tests/Unit')
+
             $this->publishes([
-                __DIR__ . '/../config/something.php' => config_path('something.php'),
-            ], 'something-config');
+                __DIR__ . '/../templates/File.php' => app_path('File.php'),
+            ], 'file');
+
+            $this->publishes([
+                __DIR__ . '/../templates/FileTest.php' => base_path('tests/Unit/FileTest.php'),
+            ], 'file-test');
+
+            $this->publishes([
+                __DIR__ . '/../templates/FileFactory.php' => database_path('factories/FileFactory.php'),
+            ], 'file-factory');
         }
         else
         {

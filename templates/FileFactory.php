@@ -1,8 +1,6 @@
 <?php
 
-namespace RootInc\LaravelS3FileModel;
-
-use FileModel;
+use App\File;
 use bheller\ImagesGenerator\ImagesGeneratorProvider;
 use Faker\Generator as Faker;
 
@@ -17,7 +15,7 @@ use Faker\Generator as Faker;
 |
 */
 
-$factory->define(FileModel::class, function (Faker $faker) {
+$factory->define(File::class, function (Faker $faker) {
     $name = $faker->word;
     $file_extension = $faker->fileExtension;
 
@@ -32,7 +30,7 @@ $factory->define(FileModel::class, function (Faker $faker) {
     ];
 });
 
-$factory->state(FileModel::class, 'image', function(Faker $faker){
+$factory->state(File::class, 'image', function(Faker $faker){
 
     $image_data = buildAndUploadImage();
 
@@ -44,7 +42,7 @@ $factory->state(FileModel::class, 'image', function(Faker $faker){
     ];
 });
 
-$factory->state(FileModel::class, 'thumbnail', function(Faker $faker){
+$factory->state(File::class, 'thumbnail', function(Faker $faker){
 
     $image_data = buildAndUploadImage(300, 200);
 

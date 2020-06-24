@@ -1,19 +1,17 @@
 <?php
 
-namespace Tests\Unit;
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-
-use App\FileModel;
+namespace RootInc\LaravelS3FileModel;
 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use Tests\TestCase;
+
+use FileModel;
 
 class FileModelTest extends TestCase
 {
-    use RefreshDatabase;
-
     /** @test */
     public function it_has_the_proper_fields()
     {
