@@ -10,6 +10,12 @@ use AWS;
 
 class FileModel extends Model
 {
+    protected $guarded = [];
+
+    protected $appends = [
+        'fullUrl'
+    ];
+    
     /**
      * Allows calling $this->fullUrl
      *
