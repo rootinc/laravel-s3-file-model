@@ -4,7 +4,7 @@ namespace RootInc\LaravelS3FileModel;
 
 use Illuminate\Support\ServiceProvider;
 
-class S3FileModelServiceProvider extends ServiceProvider
+class FileModelServiceProvider extends ServiceProvider
 {
     /**
      * Bootstrap the application services.
