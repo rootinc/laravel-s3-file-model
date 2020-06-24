@@ -22,7 +22,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "RootInc\\LaravelS3FileModel\\FileModelProvider"
+                "RootInc\\LaravelS3FileModel\\FileModelServiceProvider"
             ]
         }
     }
