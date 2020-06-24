@@ -5,8 +5,7 @@ namespace RootInc\LaravelS3FileModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
-
-use AWS;
+use Aws\Laravel\AwsFacade as AWS;
 
 class FileModel extends Model
 {
@@ -15,7 +14,7 @@ class FileModel extends Model
     protected $appends = [
         'fullUrl'
     ];
-    
+
     /**
      * Allows calling $this->fullUrl
      *
