@@ -15,12 +15,6 @@ class FileModelServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole())
         {
-            //app_path()
-
-            //database_path('factories/UserFactory.php');
-
-            //base_path('tests/Unit')
-
             $this->publishes([
                 __DIR__ . '/../templates/File.php' => app_path('File.php'),
             ], 'file');

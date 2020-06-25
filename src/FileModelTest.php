@@ -89,8 +89,7 @@ class FileModelTest extends TestCase
 
         //test file
         $uploadedFile = FileModel::makeUploadFileFromDataURI('dog.png', 'image/png', $this->get1x1RedPixelImage());
-
-        $upload_location = FileModel::upload($uploadedFile, null, true);
+        $upload_location = FileModel::upload($uploadedFile, null, false);
 
         $value = FileModel::exists($upload_location);
         $this->assertTrue($value);
@@ -101,9 +100,9 @@ class FileModelTest extends TestCase
     {
         $name = "turtle";
 
-        //test file
+        //test file (seperated out so we can do assertions)
         $uploadedFile = FileModel::makeUploadFileFromDataURI('dog.png', 'image/png', $this->get1x1RedPixelImage());
-        $upload_location = FileModel::upload($uploadedFile, null, true);
+        $upload_location = FileModel::upload($uploadedFile, null, false);
 
         $file = FileModel::createFile($name, $uploadedFile, $upload_location);
 
@@ -129,11 +128,7 @@ class FileModelTest extends TestCase
 
         $name = "donkey";
 
-        //test file
-        $uploadedFile = FileModel::makeUploadFileFromDataURI('dog.png', 'image/png', $this->get1x1RedPixelImage());
-        $upload_location = FileModel::upload($uploadedFile, null, true);
-
-        $file = FileModel::createFile($name, $uploadedFile, $upload_location);
+        $file = FileModel::uploadAndCreateFileFromDataURI('dog.png', 'image/png', $this->get1x1RedPixelImage());
 
         FileModel::deleteUpload($file->location);
 

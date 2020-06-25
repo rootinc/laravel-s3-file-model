@@ -44,11 +44,21 @@ class FileModel extends Model
 
     // STATIC HELPERS
 
-    public static function uploadAndCreateFileFromDataURI($file_name, $file_type, $data_URI)
+    /**
+     * Makes an uploadedFile object.  Used for FilesTableSeeder as well
+     *
+     * @param string $file_name file name of the file to get extension from
+     * @param string $file_type file mime type of the file
+     * @param string $data_URI all the data
+     * @param string|null $relative_directory the directory where the file goes relative to UPLOAD_DIRECTORY
+     * @param boolean $public permission of the file
+     * @return \Illuminate\Http\UploadedFile
+     */
+    public static function uploadAndCreateFileFromDataURI($file_name, $file_type, $data_URI, $relative_directory = null, $public = false)
     {
         $uploadedFile = self::makeUploadFileFromDataURI($file_name, $file_type, $data_URI);
-        $upload_location = File::upload($uploadedFile, null, false);
-        return File::createFile($file_name, $uploadedFile, $upload_location);
+        $upload_location = self::upload($uploadedFile, $relative_directory, $public);
+        return self::createFile($file_name, $uploadedFile, $upload_location);
     }
 
     /**
