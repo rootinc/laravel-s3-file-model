@@ -47,7 +47,7 @@ class FileModelTest extends TestCase
     public function getFullUrlAttribute_returns_true_for_a_valid_file()
     {
         $file = factory(FileModel::class)->create([
-            'location' => FileModel::getDirectory() . '/somefile.jpg'
+            'location' => config('filesystems.default') . '/somefile.jpg'
         ]);
 
         $this->assertEquals($file->fullUrl, Storage::disk()->url($file->location));

@@ -23,10 +23,7 @@ $factory->define(File::class, function (Faker $faker) {
         'file_name' => $name . '.' . $file_extension,
         'title' => null,
         'file_type' => $faker->mimeType,
-        'location' =>
-            !empty(File::getDirectory())
-                ? File::getDirectory() . '/' . $faker->uuid . '.' . $file_extension
-                : $faker->uuid . '.' . $file_extension,
+        'location' => config('filesystems.default') . '/' . $faker->uuid . '.' . $file_extension
     ];
 });
 
