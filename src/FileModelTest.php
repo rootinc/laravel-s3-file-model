@@ -8,14 +8,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use Tests\TestCase;
 
-use FileModel;
+use App\File;
 
 class FileModelTest extends TestCase
 {
     /** @test */
     public function it_has_the_proper_fields()
     {
-        $file = factory(FileModel::class)->create([
+        $file = factory(File::class)->create([
             "file_name" => "asdf.pdf",
             "title" => "fdsa",
             "file_type" => "application/pdf",
@@ -35,7 +35,7 @@ class FileModelTest extends TestCase
     /** @test */
     public function getTitleAttribute_returns_title()
     {
-        $file = factory(FileModel::class)->create([
+        $file = factory(File::class)->create([
             'file_name' => "Rabbits.pdf",
             'title' => "Rabbits"
         ]);
@@ -46,7 +46,7 @@ class FileModelTest extends TestCase
     /** @test */
     public function getFullUrlAttribute_returns_true_for_a_valid_file()
     {
-        $file = factory(FileModel::class)->create([
+        $file = factory(File::class)->create([
             'location' => config('filesystems.default') . '/somefile.jpg'
         ]);
 

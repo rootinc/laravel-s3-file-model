@@ -26,12 +26,10 @@ class FileModelServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../templates/FileFactory.php' => database_path('factories/FileFactory.php'),
             ], 'file-factory');
-        }
-        else
-        {
-            $this->mergeConfigFrom(
-                __DIR__ . '/../config/something.php', 'something'
-            );
+
+            $this->publishes([
+                __DIR__ . '/../templates/2020_03_12_152841_create_files_table.php' => database_path('migrations/2020_03_12_152841_create_files_table.php'),
+            ], 'file-table');
         }
     }
 }

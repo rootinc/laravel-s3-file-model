@@ -9,6 +9,13 @@ use Aws\Laravel\AwsFacade as AWS;
 
 class FileModel extends Model
 {
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'files';
+    
     protected $guarded = [];
 
     protected $appends = [
