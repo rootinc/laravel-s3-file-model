@@ -13,7 +13,399 @@ Provides a File Model that supports direct uploads / downloads from S3 for a Lar
 
 ## Example Usage
 
+```
+<?php
 
+namespace App\Http\Controllers\Api\v1;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+use App\File;
+
+class FileController extends Controller
+{
+    public function index(Request $request)
+    {
+        // Return 403 since ajax
+        if( \Gate::forUser(Auth::user())->denies('view-org-users') )
+        {
+            return response()->json([
+                'status' => 'error',
+                'payload' => [
+                    'errors' => [
+                        __('auth.disallowed.ajax')
+                    ]
+                ]
+            ], 403);
+        }
+
+        $search = $request->input('search') ? $request->input('search') : "";
+
+        $queryBuilder = File::with([
+            'post' => function($q) {
+                $q->withTrashed();
+            },
+            'content.post' => function($q) {
+                $q->withTrashed();
+            },
+            'topic',
+        ]);
+
+        $files = $queryBuilder
+        ->where(function($q) use ($search)  {
+            $q->where('file_name', 'ILIKE', "%$search%")
+            ->orWhere('title', 'ILIKE', "%$search%");
+        })
+        ->orderBy('file_name')
+        ->paginate();
+
+        return response()->json([
+            'status' => "success",
+            'payload' => [
+                'files' => $files,
+            ]
+        ]);
+    }
+
+    /**
+     * Creates and uploads a file
+     *
+     * @param Illuminate\Http\Request $request
+     * @return Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        $file_name = $request->input('file_name');
+        $file_type = $request->input('file_type');
+        $file_data = $request->input('file_data');
+
+        $file = File::uploadAndCreateFileFromDataURI($file_name, $file_type, $file_data);
+        $file->refresh();
+
+        return response()->json([
+            'status' => "success",
+            'payload' => [
+                'file' => $file
+            ]
+        ]);
+    }
+
+    /**
+     * Updates and uploads replacement file
+     *
+     * @param Illuminate\Http\Request $request
+     * @return Illuminate\Http\Response
+     */
+    public function update(Request $request, File $file)
+    {
+        //this is set up with two distinct routes so that the FileUploader component can still call the `update / put` method on the file object
+        //in the title route, we only need to update the title of the file
+        //in the other route, we are doing a replacement file
+        if ($request->input('title'))
+        {
+            $file->title = $request->input('title');
+            $file->save();
+
+            return response()->json([
+                'status' => "success",
+                'payload' => [
+                    'file' => $file
+                ]
+            ]);
+        }
+        else
+        {
+            File::deleteUpload($file->location);
+
+            $file_name = $request->input('file_name');
+            $file_type = $request->input('file_type');
+            $file_data = $request->input('file_data');
+
+            $uploadedFile = File::makeUploadFileFromDataURI($file_name, $file_type, $file_data);
+            $upload_location = File::upload($uploadedFile, null, true);
+
+            $file->file_name = $file_name;
+            $file->file_type = $uploadedFile->getClientMimeType();
+            $file->location = $upload_location;
+
+            $file->save();
+
+            return response()->json([
+                'status' => "success",
+                'payload' => [
+                    'file' => $file
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Deletes and deletes uploaded file
+     *
+     * @param Illuminate\Http\Request $request
+     * @return Illuminate\Http\Response
+     */
+    public function destroy(Request $request, File $file)
+    {
+        File::deleteUpload($file->location);
+
+        $file->delete();
+
+        return response()->json([
+            'status' => "success",
+            'payload' => []
+        ]);
+    }
+}
+```
+
+```
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import PropTypes from 'prop-types';
+import api from '../../helpers/api';
+
+const propTypes = {
+  afterSuccess: PropTypes.func,
+  file: PropTypes.object,
+};
+
+const defaultProps = {
+  afterSuccess: () => {},
+};
+
+function FileUploader(props){
+  const elInput = useRef(null);
+
+  const [file, setFile] = useState(null);
+  const [draggingState, setDraggingState] = useState(false);
+  const [percentCompleted, setPercentCompleted] = useState(null);
+
+  // Use dependency on props.file for when we load an existing file
+  useEffect(() => {
+    setFile(props.file)
+  }, [props.file]);
+
+  const dragOver = () => {
+    if (percentCompleted === null)
+    {
+      setDraggingState(true)
+    }
+  };
+
+  const dragEnd = () => {
+    setDraggingState(false)
+  };
+
+  const nullImportValue = () => {
+    ReactDOM.findDOMNode(elInput.current).value = null;
+  };
+
+  const handleChange = (file) => {
+    const reader = new FileReader();
+
+    reader.addEventListener("load", () => {
+      upload({
+        file_name: file.name,
+        file_type: file.type,
+        file_data: reader.result
+      });
+    }, false);
+
+    reader.readAsDataURL(file);
+  };
+
+  const upload = async (data) => {
+    const config = {
+      onUploadProgress: (e) => {
+        const percentCompleted = Math.round( (e.loaded * 100) / e.total );
+        setPercentCompleted(percentCompleted)
+      }
+    };
+
+    const response = file
+      ? await api.putFile(file.id, data, config)
+      : await api.postFile(data, config)
+
+    response.ok
+      ? success(response)
+      : error(response)
+  };
+
+  const success = (response) => {
+    nullImportValue();
+
+    // @todo: unwrap API response and check `response.ok`
+    if (response.data.status === "success")
+    {
+      setFile(response.data.payload.file)
+    }
+    else
+    {
+      alert(response.data.payload.errors[0]);
+    }
+    setPercentCompleted(null)
+    props.afterSuccess(response.data.payload.file)
+  };
+
+  const error = (error) => {
+    nullImportValue();
+    setPercentCompleted(null)
+
+    alert(window._genericErrorMessage);
+  };
+
+  const renderInstructions = () => {
+    if (percentCompleted === null)
+    {
+      return (
+        <p
+          style={{
+            cursor: "pointer"
+          }}
+          onClick={() => {
+            ReactDOM.findDOMNode(elInput.current).click();
+          }}
+        >
+          <strong>{file ? "Replace" : "Choose"} File</strong> or drag it here.
+        </p>
+      );
+    }
+    else if (percentCompleted < 100)
+    {
+      return (
+        <progress
+          value={percentCompleted}
+          max="100"
+        >
+          {percentCompleted}%
+        </progress>
+      );
+    }
+    else
+    {
+      return <i className="fa fa-cog fa-spin fa-3x fa-fw" aria-hidden="true" />;
+    }
+  };
+
+  const renderFileInfo = () => {
+    if (file)
+    {
+      return (
+        <div>
+          <p
+            style={{
+              marginBottom: 0
+            }}
+          >
+            Current File:&nbsp;
+            <a
+              href={file.fullUrl}
+              target="_blank"
+              style={{
+                wordBreak: "break-all"
+              }}
+            >
+              {file.title}
+            </a>
+            <button
+              style={{
+                marginLeft: "10px",
+                backgroundColor: "gray",
+                padding: ".45rem .5rem .3rem .5rem"
+              }}
+              onClick={async () => {
+                const result = prompt("New Title?", file.title);
+                if (result)
+                {
+                  const response = await api.putFile(file.id, {title: result});
+
+                  response.ok
+                    ? success(response)
+                    : error(response)
+                }
+              }}
+            >
+              Rename
+            </button>
+          </p>
+          <p
+            style={{
+              marginTop: 0,
+              wordBreak: "break-all"
+            }}
+          >
+            Original Name: {file.file_name}
+          </p>
+        </div>
+      );
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  return (
+    <div
+      style={{
+        border: "2px dashed black",
+        borderRadius: "10px",
+        backgroundColor: draggingState ? "white" : "lightgray",
+        height: "250px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+      onClick={(e) => {e.stopPropagation();}}
+      onDrag={(e) => {e.preventDefault();}}
+      onDragStart={(e) => {e.preventDefault();}}
+      onDragEnd={(e) => {e.preventDefault(); dragEnd();}}
+      onDragOver={(e) => {e.preventDefault(); dragOver();}}
+      onDragEnter={(e) => {e.preventDefault(); dragOver();}}
+      onDragLeave={(e) => {e.preventDefault(); dragEnd();}}
+      onDrop={(e) => {
+        e.preventDefault();
+        dragEnd();
+
+        if (percentCompleted === null)
+        {
+          const droppedFiles = e.dataTransfer.files;
+          handleChange(droppedFiles[0]);
+        }
+      }}
+    >
+      <i className="fa fa-upload" aria-hidden="true" />
+      {
+        renderInstructions()
+      }
+      {
+        renderFileInfo()
+      }
+      <input
+        ref={elInput}
+        className="file-uploader"
+        type="file"
+        style={{
+          position: "fixed",
+          top: "-100em"
+        }}
+        onChange={(e) => {
+          handleChange(e.target.files[0]);
+        }}
+      />
+    </div>
+  );
+}
+
+FileUploader.propTypes = propTypes;
+FileUploader.defaultProps = defaultProps;
+
+export default FileUploader;
+```
 
 ## Contributing
 
