@@ -164,20 +164,49 @@ class FileModel extends Model
 
     //S3 METHODS ONLY
 
-    protected static function authorizeS3Upload($relative_path, $acl = 'private')
+    public static function s3CreateUpload($file_name, $file_type, $relative_directory = null, $public = false)
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
         {
-            return null;
+            throw \Exception("s3 is not the filesystem driver");
         }
+
+        $file = new FileModel();
+
+        $ext = pathinfo($file_name, PATHINFO_EXTENSION);
+
+        $directory =  config('filesystems.disks.s3.directory') . ($relative_directory
+            ? $relative_directory
+            : '');
+
+        $file->location = $directory . "/" . uniqid() . "." . $ext;
+        $file->file_name = $file_name;
+        $file->file_type = $file_type;
+
+        $upload_url = $file->s3AuthorizeUploadUrl($public);
+        $file_id = $file->id;
+
+        return compact('file_id', 'upload_url');
+    }
+
+    public function s3AuthorizeUploadUrl($relative_path, $public = false)
+    {
+        $filesystem_driver = config('filesystems.default');
+        if ($filesystem_driver !== 's3')
+        {
+            throw \Exception("s3 is not the filesystem driver");
+        }
+
+        // Public or private
+        $visibility = $public ? 'public' : 'private';
 
         $s3Client = AWS::createClient($filesystem_driver);
 
         $cmd = $s3Client->getCommand('PutObject', [
-            'Bucket' => getenv('AWS_BUCKET'),
-            'Key' => getenv('AWS_UPLOAD_FOLDER') . $relative_path,
-            'ACL' => $acl
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $this->location,
+            'ACL' => $visibility,
         ]);
 
         $request = $s3Client->createPresignedRequest($cmd, '+24 hours');
@@ -185,23 +214,23 @@ class FileModel extends Model
         return $request->getUri();
     }
 
-    public function downloadUrl()
+    public function s3AuthorizeDownloadUrl()
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
         {
-            return null;
+            throw \Exception("s3 is not the filesystem driver");
         }
 
         $s3Client = AWS::createClient($filesystem_driver);
         $fileName = $this->file_name;
 
-        $command = $s3Client->getCommand('GetObject', [
-            'Bucket' => getenv('AWS_BUCKET'),
+        $cmd = $s3Client->getCommand('GetObject', [
+            'Bucket' => config('filesystems.disks.s3.bucket'),
             'Key' => $this->location,
             'ResponseContentDisposition' => "attachment; filename=$fileName",
         ]);
 
-        return $s3Client->createPresignedRequest($command, '+5 minutes')->getUri()->__toString();
+        return $s3Client->createPresignedRequest($cmd, '+5 minutes')->getUri()->__toString();
     }
 }
