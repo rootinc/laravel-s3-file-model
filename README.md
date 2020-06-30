@@ -5,11 +5,18 @@ Provides a File Model that supports direct uploads / downloads from S3 for a Lar
 ## Installation
 
 1. `composer require rootinc/laravel-s3-file-model`
-2. Run `php artisan vendor:publish --provider="RootInc\LaravelS3FileModel\FileModelServiceProvider"` to create `File` model in `app`, `FileTest` in `tests\Unit` and `FileFactory` in `database\factories`
+2. Run `php artisan vendor:publish --provider="RootInc\LaravelS3FileModel\FileModelServiceProvider"` to create `File` model in `app`, `FileTest` in `tests\Unit`, `FileFactory` in `database\factories` and `2020_03_12_152841_create_files_table` in `database\migrations`
 3. Run `php artisan vendor:publish  --provider="Aws\Laravel\AwsServiceProvider` which adds `aws.php` in the `config` folder
 4. In the `aws.php` file, change `'region' => env('AWS_REGION', 'us-east-1'),` to use `AWS_DEFAULT_REGION`
 5. In `config\filesystems.php`, add key `'directory' => '', // root dir` to `public` and add key `'directory' => env('AWS_UPLOAD_FOLDER'),` to `s3`
-6. :tada:
+6. In `tests\TestCase`, add this function:
+```
+protected function get1x1RedPixelImage()
+{
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+}
+```
+7. :tada:
 
 ## Example Usage
 
