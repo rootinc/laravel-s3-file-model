@@ -164,15 +164,13 @@ class FileModel extends Model
 
     //S3 METHODS ONLY
 
-    public static function s3CreateUpload($file_name, $file_type, $relative_directory = null, $public = false)
+    public static function s3CreateUpload(FileModel $file, $file_name, $file_type, $relative_directory = null, $public = false)
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
         {
-            throw \Exception("s3 is not the filesystem driver");
+            throw new \Exception("s3 is not the filesystem driver");
         }
-
-        $file = new FileModel();
 
         $ext = pathinfo($file_name, PATHINFO_EXTENSION);
 
@@ -184,18 +182,19 @@ class FileModel extends Model
         $file->file_name = $file_name;
         $file->file_type = $file_type;
 
-        $upload_url = $file->s3AuthorizeUploadUrl($public);
-        $file_id = $file->id;
+        $file->save();
 
-        return compact('file_id', 'upload_url');
+        $upload_url = $file->s3AuthorizeUploadUrl($public);
+
+        return compact('file', 'upload_url');
     }
 
-    public function s3AuthorizeUploadUrl($relative_path, $public = false)
+    public function s3AuthorizeUploadUrl($public = false)
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
         {
-            throw \Exception("s3 is not the filesystem driver");
+            throw new \Exception("s3 is not the filesystem driver");
         }
 
         // Public or private
@@ -209,9 +208,7 @@ class FileModel extends Model
             'ACL' => $visibility,
         ]);
 
-        $request = $s3Client->createPresignedRequest($cmd, '+24 hours');
-
-        return $request->getUri();
+        return $s3Client->createPresignedRequest($cmd, '+24 hours')->getUri()->__toString();
     }
 
     public function s3AuthorizeDownloadUrl()
@@ -219,7 +216,7 @@ class FileModel extends Model
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
         {
-            throw \Exception("s3 is not the filesystem driver");
+            throw new \Exception("s3 is not the filesystem driver");
         }
 
         $s3Client = AWS::createClient($filesystem_driver);

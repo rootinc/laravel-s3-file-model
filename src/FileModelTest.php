@@ -135,4 +135,85 @@ class FileModelTest extends TestCase
         $value = FileModel::exists($file->location);
         $this->assertFalse($value);
     }
+
+    /** @test */
+    public function s3CreateUpload_throws_exception()
+    {
+        //force to local for this test
+        config(['filesystems.default' => 'local']);
+
+        $file = new FileModel();
+
+        $this->expectException(\Exception::class);
+
+        $data = File::s3CreateUpload($file, 'dog.png', 'image/png');
+    }
+
+    /** @test */
+    public function s3CreateUpload_creates_file_and_upload_url()
+    {
+        //force to s3 for this test
+        config(['filesystems.default' => 's3']);
+
+        $file = new FileModel();
+
+        $data = File::s3CreateUpload($file, 'dog.png', 'image/png');
+
+        $file->refresh();
+
+        $this->assertEquals($data['file']->id, $file->id);
+        $this->assertArrayHasKey('upload_url', $data);
+    }
+
+    /** @test */
+    public function s3AuthorizeUploadUrl_throws_exception()
+    {
+        //force to local for this test
+        config(['filesystems.default' => 'local']);
+
+        $file = factory(File::class)->create();
+
+        $this->expectException(\Exception::class);
+
+        $str = $file->s3AuthorizeUploadUrl();
+    }
+
+    /** @test */
+    public function s3AuthorizeUploadUrl_creates_url()
+    {
+        //force to s3 for this test
+        config(['filesystems.default' => 's3']);
+
+        $file = factory(File::class)->create();
+
+        $str = $file->s3AuthorizeUploadUrl();
+
+        $this->assertNotEmpty($str);
+    }
+
+    /** @test */
+    public function s3AuthorizeDownloadUrl_throws_exception()
+    {
+        //force to local for this test
+        config(['filesystems.default' => 'local']);
+
+        $file = factory(File::class)->create();
+
+        $this->expectException(\Exception::class);
+
+        $str = $file->s3AuthorizeDownloadUrl();
+    }
+
+    /** @test */
+    public function s3AuthorizeDownloadUrl_creates_url()
+    {
+        //force to s3 for this test
+        config(['filesystems.default' => 's3']);
+
+        $file = factory(File::class)->create();
+
+        $str = $file->s3AuthorizeDownloadUrl();
+
+        $this->assertNotEmpty($str);
+    }
 }

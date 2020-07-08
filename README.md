@@ -36,6 +36,7 @@ class FileController extends Controller
     public function index(Request $request)
     {
         // Return 403 since ajax
+        /*
         if( \Gate::forUser(Auth::user())->denies('view-org-users') )
         {
             return response()->json([
@@ -47,6 +48,7 @@ class FileController extends Controller
                 ]
             ], 403);
         }
+        */
 
         $search = $request->input('search') ? $request->input('search') : "";
 
@@ -88,15 +90,37 @@ class FileController extends Controller
         $file_type = $request->input('file_type');
         $file_data = $request->input('file_data');
 
-        $file = File::uploadAndCreateFileFromDataURI($file_name, $file_type, $file_data);
-        $file->refresh();
+        //this is set up with two distinct routes so that the FileUploader component can still call the `store / post` method on the file object
+        //in the cloud route, we are doing a direct upload to s3
+        //in the other route, we are doing a an upload to the server, then to s3
+        if (!$file_data)
+        {
+            $data = File::s3CreateUpload(new File, $file_name, $file_type);
+            $file = $data['file'];
+            $upload_url = $data['upload_url'];
 
-        return response()->json([
-            'status' => "success",
-            'payload' => [
-                'file' => $file
-            ]
-        ]);
+            $file->refresh();
+
+            return response()->json([
+                'status' => "success",
+                'payload' => [
+                    'file' => $file,
+                    'upload_url' => $upload_url,
+                ]
+            ]);
+        }
+        else
+        {
+            $file = File::uploadAndCreateFileFromDataURI($file_name, $file_type, $file_data);
+            $file->refresh();
+
+            return response()->json([
+                'status' => "success",
+                'payload' => [
+                    'file' => $file
+                ]
+            ]);
+        }
     }
 
     /**
@@ -130,21 +154,40 @@ class FileController extends Controller
             $file_type = $request->input('file_type');
             $file_data = $request->input('file_data');
 
-            $uploadedFile = File::makeUploadFileFromDataURI($file_name, $file_type, $file_data);
-            $upload_location = File::upload($uploadedFile, null, true);
+            if (!$file_data)
+            {
+                $data = File::s3CreateUpload($file, $file_name, $file_type);
+                $file = $data['file'];
+                $upload_url = $data['upload_url'];
 
-            $file->file_name = $file_name;
-            $file->file_type = $uploadedFile->getClientMimeType();
-            $file->location = $upload_location;
+                $file->refresh();
 
-            $file->save();
+                return response()->json([
+                    'status' => "success",
+                    'payload' => [
+                        'file' => $file,
+                        'upload_url' => $upload_url,
+                    ]
+                ]);
+            }
+            else
+            {
+                $uploadedFile = File::makeUploadFileFromDataURI($file_name, $file_type, $file_data);
+                $upload_location = File::upload($uploadedFile, null, true);
 
-            return response()->json([
-                'status' => "success",
-                'payload' => [
-                    'file' => $file
-                ]
-            ]);
+                $file->file_name = $file_name;
+                $file->file_type = $uploadedFile->getClientMimeType();
+                $file->location = $upload_location;
+
+                $file->save();
+
+                return response()->json([
+                    'status' => "success",
+                    'payload' => [
+                        'file' => $file
+                    ]
+                ]);
+            }
         }
     }
 
@@ -177,10 +220,12 @@ import api from '../../helpers/api';
 const propTypes = {
   afterSuccess: PropTypes.func,
   file: PropTypes.object,
+  cloudUpload: PropTypes.bool,
 };
 
 const defaultProps = {
   afterSuccess: () => {},
+  cloudUpload: false,
 };
 
 function FileUploader(props){
@@ -214,21 +259,71 @@ function FileUploader(props){
     const reader = new FileReader();
 
     reader.addEventListener("load", () => {
-      upload({
-        file_name: file.name,
-        file_type: file.type,
-        file_data: reader.result
-      });
+      if (props.cloudUpload)
+      {
+        pingUpload({
+          file_name: file.name,
+          file_type: file.type,
+        }, reader.result);
+      }
+      else
+      {
+        upload({
+          file_name: file.name,
+          file_type: file.type,
+          file_data: reader.result
+        });
+      }
     }, false);
 
     reader.readAsDataURL(file);
   };
 
+  const pingUpload = async (data, file_data) => {
+    const response = file
+      ? await api.putFile(file.id, data)
+      : await api.postFile(data)
+
+    response.ok
+      ? cloudUpload(response, file_data)
+      : error(response)
+  }
+
+  const cloudUpload = async (response, file_data) => {
+    const putCloudObject = () => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", response.data.payload.upload_url);
+
+        xhr.onload = () => {
+          resolve(xhr);
+        };
+
+        xhr.onerror = () => {
+          reject(new Error(xhr.statusText));
+        };
+
+        xhr.upload.onprogress = (e) => {
+          const percentCompleted = Math.round( (e.loaded / e.total) * 100 );
+          setPercentCompleted(percentCompleted);
+        };
+
+        xhr.send(file_data);
+      });
+    }
+
+    const cloudResponse = await putCloudObject();
+
+    cloudResponse.status === 200
+      ? success(response)
+      : error(cloudResponse.response)
+  }
+
   const upload = async (data) => {
     const config = {
       onUploadProgress: (e) => {
-        const percentCompleted = Math.round( (e.loaded * 100) / e.total );
-        setPercentCompleted(percentCompleted)
+        const percentCompleted = Math.round( (e.loaded / e.total) * 100 );
+        setPercentCompleted(percentCompleted);
       }
     };
 
