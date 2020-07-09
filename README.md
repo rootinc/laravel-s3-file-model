@@ -33,11 +33,11 @@ use App\File;
 
 class FileController extends Controller
 {
+    //TODO use this?
     public function index(Request $request)
     {
         // Return 403 since ajax
-        /*
-        if( \Gate::forUser(Auth::user())->denies('view-org-users') )
+        if( \Gate::forUser(Auth::user())->denies('update-files') )
         {
             return response()->json([
                 'status' => 'error',
@@ -48,7 +48,6 @@ class FileController extends Controller
                 ]
             ], 403);
         }
-        */
 
         $search = $request->input('search') ? $request->input('search') : "";
 
@@ -86,6 +85,19 @@ class FileController extends Controller
      */
     public function store(Request $request)
     {
+        // Return 403 since ajax
+        if( \Gate::forUser(Auth::user())->denies('update-files') )
+        {
+            return response()->json([
+                'status' => 'error',
+                'payload' => [
+                    'errors' => [
+                        __('auth.disallowed.ajax')
+                    ]
+                ]
+            ], 403);
+        }
+
         $file_name = $request->input('file_name');
         $file_type = $request->input('file_type');
         $file_data = $request->input('file_data');
@@ -131,6 +143,19 @@ class FileController extends Controller
      */
     public function update(Request $request, File $file)
     {
+        // Return 403 since ajax
+        if( \Gate::forUser(Auth::user())->denies('update-files') )
+        {
+            return response()->json([
+                'status' => 'error',
+                'payload' => [
+                    'errors' => [
+                        __('auth.disallowed.ajax')
+                    ]
+                ]
+            ], 403);
+        }
+
         //this is set up with two distinct routes so that the FileUploader component can still call the `update / put` method on the file object
         //in the title route, we only need to update the title of the file
         //in the other route, we are doing a replacement file
@@ -154,6 +179,9 @@ class FileController extends Controller
             $file_type = $request->input('file_type');
             $file_data = $request->input('file_data');
 
+            //this is set up with two distinct routes so that the FileUploader component can still call the `update / put` method on the file object
+            //in the cloud route, we are doing a direct upload to s3
+            //in the other route, we are doing a an upload to the server, then to s3
             if (!$file_data)
             {
                 $data = File::s3CreateUpload($file, $file_name, $file_type);
@@ -199,6 +227,19 @@ class FileController extends Controller
      */
     public function destroy(Request $request, File $file)
     {
+        // Return 403 since ajax
+        if( \Gate::forUser(Auth::user())->denies('update-files') )
+        {
+            return response()->json([
+                'status' => 'error',
+                'payload' => [
+                    'errors' => [
+                        __('auth.disallowed.ajax')
+                    ]
+                ]
+            ], 403);
+        }
+
         File::deleteUpload($file->location);
 
         $file->delete();
@@ -221,11 +262,13 @@ const propTypes = {
   afterSuccess: PropTypes.func,
   file: PropTypes.object,
   cloudUpload: PropTypes.bool,
+  style: PropTypes.object,
 };
 
 const defaultProps = {
   afterSuccess: () => {},
   cloudUpload: false,
+  style: {},
 };
 
 function FileUploader(props){
@@ -276,7 +319,14 @@ function FileUploader(props){
       }
     }, false);
 
-    reader.readAsDataURL(file);
+    if (props.cloudUpload)
+    {
+      reader.readAsArrayBuffer(file);
+    }
+    else
+    {
+      reader.readAsDataURL(file);
+    }
   };
 
   const pingUpload = async (data, file_data) => {
@@ -294,6 +344,7 @@ function FileUploader(props){
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", response.data.payload.upload_url);
+        xhr.setRequestHeader("Content-Type", response.data.payload.file.file_type);
 
         xhr.onload = () => {
           resolve(xhr);
@@ -450,18 +501,20 @@ function FileUploader(props){
     }
   }
 
+  const style = Object.assign({
+    border: "2px dashed black",
+    borderRadius: "10px",
+    backgroundColor: draggingState ? "white" : "lightgray",
+    height: "250px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+  }, props.style);
+
   return (
     <div
-      style={{
-        border: "2px dashed black",
-        borderRadius: "10px",
-        backgroundColor: draggingState ? "white" : "lightgray",
-        height: "250px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
+      style={style}
       onClick={(e) => {e.stopPropagation();}}
       onDrag={(e) => {e.preventDefault();}}
       onDragStart={(e) => {e.preventDefault();}}

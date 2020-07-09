@@ -202,16 +202,18 @@ class FileModel extends Model
 
         $s3Client = AWS::createClient($filesystem_driver);
 
-        $cmd = $s3Client->getCommand('PutObject', [
+        $data = [
             'Bucket' => config('filesystems.disks.s3.bucket'),
             'Key' => $this->location,
             'ACL' => $visibility,
-        ]);
+        ];
+
+        $cmd = $s3Client->getCommand('PutObject', $data);
 
         return $s3Client->createPresignedRequest($cmd, '+24 hours')->getUri()->__toString();
     }
 
-    public function s3AuthorizeDownloadUrl()
+    public function s3AuthorizeDownloadUrl($attachment = false)
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
@@ -222,11 +224,18 @@ class FileModel extends Model
         $s3Client = AWS::createClient($filesystem_driver);
         $fileName = $this->file_name;
 
-        $cmd = $s3Client->getCommand('GetObject', [
+        $data = [
             'Bucket' => config('filesystems.disks.s3.bucket'),
             'Key' => $this->location,
             'ResponseContentDisposition' => "attachment; filename=$fileName",
-        ]);
+        ];
+
+        if (!$attachment)
+        {
+            unset($data['ResponseContentDisposition']);
+        }
+
+        $cmd = $s3Client->getCommand('GetObject', $data);
 
         return $s3Client->createPresignedRequest($cmd, '+5 minutes')->getUri()->__toString();
     }
