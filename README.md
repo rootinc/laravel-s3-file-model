@@ -298,48 +298,41 @@ function FileUploader(props){
     ReactDOM.findDOMNode(elInput.current).value = null;
   };
 
-  const handleChange = (file) => {
+  const handleChange = (blob) => {
     const reader = new FileReader();
 
     reader.addEventListener("load", () => {
       if (props.cloudUpload)
       {
         pingUpload({
-          file_name: file.name,
-          file_type: file.type,
-        }, reader.result);
+          file_name: blob.name,
+          file_type: blob.type,
+        }, blob); //XMLHttpRequest can take a raw file blob, which works better for streaming the file
       }
       else
       {
         upload({
-          file_name: file.name,
-          file_type: file.type,
+          file_name: blob.name,
+          file_type: blob.type,
           file_data: reader.result
         });
       }
     }, false);
 
-    if (props.cloudUpload)
-    {
-      reader.readAsArrayBuffer(file);
-    }
-    else
-    {
-      reader.readAsDataURL(file);
-    }
+    reader.readAsDataURL(blob);
   };
 
-  const pingUpload = async (data, file_data) => {
+  const pingUpload = async (data, blob) => {
     const response = file
       ? await api.putFile(file.id, data)
       : await api.postFile(data)
 
     response.ok
-      ? cloudUpload(response, file_data)
+      ? cloudUpload(response, blob)
       : error(response)
   }
 
-  const cloudUpload = async (response, file_data) => {
+  const cloudUpload = async (response, blob) => {
     const putCloudObject = () => {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -359,7 +352,8 @@ function FileUploader(props){
           setPercentCompleted(percentCompleted);
         };
 
-        xhr.send(file_data);
+        //thankfully blobs can be sent up, and this works better https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send
+        xhr.send(blob);
       });
     }
 
