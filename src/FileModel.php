@@ -189,7 +189,7 @@ class FileModel extends Model
         return compact('file', 'upload_url');
     }
 
-    public function s3AuthorizeUploadUrl($public = false)
+    public function s3AuthorizeUploadUrl($public = false, $timing = '+24 hours')
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
@@ -210,10 +210,10 @@ class FileModel extends Model
 
         $cmd = $s3Client->getCommand('PutObject', $data);
 
-        return $s3Client->createPresignedRequest($cmd, '+24 hours')->getUri()->__toString();
+        return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
     }
 
-    public function s3AuthorizeDownloadUrl($attachment = false)
+    public function s3AuthorizeDownloadUrl($attachment = false, $timing = '+5 minutes')
     {
         $filesystem_driver = config('filesystems.default');
         if ($filesystem_driver !== 's3')
@@ -237,6 +237,6 @@ class FileModel extends Model
 
         $cmd = $s3Client->getCommand('GetObject', $data);
 
-        return $s3Client->createPresignedRequest($cmd, '+5 minutes')->getUri()->__toString();
+        return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
     }
 }
