@@ -7,7 +7,7 @@ use App\File;
 
 use Illuminate\Http\Request;
 
-class FileControllerBase extends Controller
+class FileBaseController extends Controller
 {
     public function index(Request $request)
     {

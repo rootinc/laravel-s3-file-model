@@ -2,9 +2,9 @@
 
 namespace App;
 
-use RootInc\LaravelS3FileModel\FileControllerBase;
+use RootInc\LaravelS3FileModel\FileBaseController;
 
-class FileController extends FileControllerBase
+class FileController extends FileBaseController
 {
     
 }
