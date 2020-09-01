@@ -24,8 +24,12 @@ class FileModelServiceProvider extends ServiceProvider
             ], 'file-test');
 
             $this->publishes([
+                __DIR__ . '/../templates/FileControllerTest.php' => base_path('tests/Unit/FileControllerTest.php'),
+            ], 'file-controller-test');
+
+            $this->publishes([
                 __DIR__ . '/../templates/FileController.php' => app_path('Http/Controllers/FileController.php'),
-            ], 'file-test');
+            ], 'file-controller');
 
             $this->publishes([
                 __DIR__ . '/../templates/FileFactory.php' => database_path('factories/FileFactory.php'),
