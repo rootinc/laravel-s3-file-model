@@ -8,12 +8,28 @@ use App\User;
 
 class FileControllerTest extends FileBaseControllerTest
 {
-    public function __construct()
+    protected function getUserForIndex()
     {
-        $this->user_index = factory(User::class)->create();
-        $this->user_index_error = factory(User::class)->create();
-        $this->user_create = factory(User::class)->create();
-        $this->user_update = factory(User::class)->create();
-        $this->user_delete = factory(User::class)->create();
+        return factory(User::class)->states("superadmin")->create();
+    }
+
+    protected function getUserForIndexError()
+    {
+        return factory(User::class)->states("user")->create();
+    }
+
+    protected function getUserForCreate()
+    {
+        return factory(User::class)->states("superadmin")->create();
+    }
+
+    protected function getUserForUpdate()
+    {
+        return factory(User::class)->states("superadmin")->create();
+    }
+
+    protected function getUserForDelete()
+    {
+        return factory(User::class)->states("superadmin")->create();
     }
 }
