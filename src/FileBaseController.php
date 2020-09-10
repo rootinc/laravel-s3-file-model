@@ -40,12 +40,15 @@ class FileBaseController extends Controller
         $file_type = $request->input('file_type');
         $file_data = $request->input('file_data');
 
+        $relative_directory = $request->input('directory') ?? null;
+        $public = $request->input('public') ?? false;
+
         //this is set up with two distinct routes so that the FileUploader component can still call the `store / post` method on the file object
         //in the cloud route, we are doing a direct upload to s3
         //in the other route, we are doing a an upload to the server, then to s3
         if (!$file_data)
         {
-            $data = File::s3CreateUpload(new File, $file_name, $file_type);
+            $data = File::s3CreateUpload(new File, $file_name, $file_type, $relative_directory, $public);
             $file = $data['file'];
             $upload_url = $data['upload_url'];
 
@@ -61,7 +64,7 @@ class FileBaseController extends Controller
         }
         else
         {
-            $file = File::uploadAndCreateFileFromDataURI($file_name, $file_type, $file_data);
+            $file = File::uploadAndCreateFileFromDataURI($file_name, $file_type, $file_data, $relative_directory, $public);
             $file->refresh();
 
             return response()->json([
@@ -104,12 +107,15 @@ class FileBaseController extends Controller
             $file_type = $request->input('file_type');
             $file_data = $request->input('file_data');
 
+            $relative_directory = $request->input('directory') ?? null;
+            $public = $request->input('public') ?? false;
+
             //this is set up with two distinct routes so that the FileUploader component can still call the `update / put` method on the file object
             //in the cloud route, we are doing a direct upload to s3
             //in the other route, we are doing a an upload to the server, then to s3
             if (!$file_data)
             {
-                $data = File::s3CreateUpload($file, $file_name, $file_type);
+                $data = File::s3CreateUpload($file, $file_name, $file_type, $relative_directory, $public);
                 $file = $data['file'];
                 $upload_url = $data['upload_url'];
 
@@ -125,7 +131,7 @@ class FileBaseController extends Controller
             }
             else
             {
-                $uploadedFile = File::makeUploadFileFromDataURI($file_name, $file_type, $file_data);
+                $uploadedFile = File::makeUploadFileFromDataURI($file_name, $file_type, $file_data, $relative_directory, $public);
                 $upload_location = File::upload($uploadedFile, null, true);
 
                 $file->file_name = $file_name;

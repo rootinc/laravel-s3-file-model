@@ -131,7 +131,7 @@ class FileModel extends Model
             : '');
 
         // Public or private
-        $visibility = $public ? 'public' : 'private';
+        $visibility = $public ? 'public-read' : 'private';
 
         return $disk->putFileAs($directory, $file, $file->getClientOriginalName(), $visibility);
     }
@@ -198,7 +198,7 @@ class FileModel extends Model
         }
 
         // Public or private
-        $visibility = $public ? 'public' : 'private';
+        $visibility = $public ? 'public-read' : 'private';
 
         $s3Client = AWS::createClient($filesystem_driver);
 

@@ -32,12 +32,14 @@ const propTypes = {
   file: PropTypes.object,
   cloudUpload: PropTypes.bool,
   style: PropTypes.object,
+  public: PropTypes.bool,
 };
 
 const defaultProps = {
   afterSuccess: () => {},
   cloudUpload: false,
   style: {},
+  public: false,
 };
 
 function FileUploader(props){
@@ -76,6 +78,7 @@ function FileUploader(props){
         pingUpload({
           file_name: blob.name,
           file_type: blob.type,
+          public: props.public,
         }, blob); //XMLHttpRequest can take a raw file blob, which works better for streaming the file
       }
       else
@@ -83,7 +86,8 @@ function FileUploader(props){
         upload({
           file_name: blob.name,
           file_type: blob.type,
-          file_data: reader.result
+          file_data: reader.result,
+          public: props.public,
         });
       }
     }, false);
