@@ -120,7 +120,7 @@ class FileBaseControllerTest extends TestCase
 	}
 
 	/** @test */
-	public function it_checks_update_works()
+	public function it_checks_update_works_for_default_filesystem()
 	{
 		$file = factory(File::class)->create();
 
@@ -138,6 +138,35 @@ class FileBaseControllerTest extends TestCase
 			'status' => "success",
 			'payload' => [
 				'file' => $file->toArray()
+			]
+		]);
+	}
+
+	/** @test */
+	public function it_checks_update_works_with_s3_filesystem()
+	{
+		//force to s3 for this test
+		config(['filesystems.default' => 's3']);
+
+		$original_file = factory(File::class)->create();
+		$update_file = factory(File::class)->make();
+
+		$response = $this->actingAs($this->getUserForCreate())->json('PUT', route('api.files.update', [
+			'file' => $original_file->id,
+			'file_name' => $update_file['file_name'],
+			'file_type' => $update_file['file_type'],
+		]));
+
+		$response->assertStatus(200);
+		$response->assertJson([
+			'status' => "success",
+			'payload' => [
+				'file' => [
+					'id' => $original_file->id,
+					'file_name' => $update_file['file_name'],
+					'file_type' => $update_file['file_type']
+				],
+				// Not checking "upload_url" since it is dynamic nonsense hash
 			]
 		]);
 	}
