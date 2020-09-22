@@ -111,6 +111,7 @@ function FileUploader(props){
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", response.data.payload.upload_url);
         xhr.setRequestHeader("Content-Type", response.data.payload.file.file_type);
+        xhr.setRequestHeader("Cache-Control", `max-age=${60*60*7}`); //cache for a week (in case a developer uploads with disable cache checked)
 
         xhr.onload = () => {
           resolve(xhr);
