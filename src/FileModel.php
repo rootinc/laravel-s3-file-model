@@ -6,237 +6,265 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 use Aws\Laravel\AwsFacade as AWS;
+use Psr\Http\Message\RequestInterface;
 
 class FileModel extends Model
 {
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'files';
-    
-    protected $guarded = [];
+	/**
+	 * The table associated with the model.
+	 *
+	 * @var string
+	 */
+	protected $table = 'files';
 
-    protected $appends = [
-        'fullUrl'
-    ];
+	protected $guarded = [];
 
-    /**
-     * Allows calling $this->fullUrl
-     *
-     * @return string
-     */
-    public function getFullUrlAttribute()
-    {
-        return Storage::disk(config('filesystems.default'))->url($this->location);
-    }
+	protected $appends = [
+		'fullUrl'
+	];
 
-    /**
-     * Since migration has been added with nullable field, we get the title from file_name if title is null
-     *
-     * @return string
-     */
-    public function getTitleAttribute()
-    {
-        if ($this->attributes['title'] === null)
-        {
-            return $this->file_name;
-        }
-        else
-        {
-            return $this->attributes['title'];
-        }
-    }
+	/**
+	 * Allows calling $this->fullUrl
+	 *
+	 * @return string
+	 */
+	public function getFullUrlAttribute()
+	{
+		return Storage::disk(config('filesystems.default'))->url($this->location);
+	}
 
-    // STATIC HELPERS
+	/**
+	 * Since migration has been added with nullable field, we get the title from file_name if title is null
+	 *
+	 * @return string
+	 */
+	public function getTitleAttribute()
+	{
+		if ($this->attributes['title'] === null)
+		{
+			return $this->file_name;
+		}
+		else
+		{
+			return $this->attributes['title'];
+		}
+	}
 
-    /**
-     * Makes an uploadedFile object.  Used for FilesTableSeeder as well
-     *
-     * @param string $file_name file name of the file to get extension from
-     * @param string $file_type file mime type of the file
-     * @param string $data_URI all the data
-     * @param string|null $relative_directory the directory where the file goes relative to UPLOAD_DIRECTORY
-     * @param boolean $public permission of the file
-     * @return \Illuminate\Http\UploadedFile
-     */
-    public static function uploadAndCreateFileFromDataURI($file_name, $file_type, $data_URI, $relative_directory = null, $public = false)
-    {
-        $uploadedFile = self::makeUploadFileFromDataURI($file_name, $file_type, $data_URI);
-        $upload_location = self::upload($uploadedFile, $relative_directory, $public);
-        return self::createFile($file_name, $uploadedFile, $upload_location);
-    }
+	// STATIC HELPERS
 
-    /**
-     * Makes an uploadedFile object.  Used for FilesTableSeeder as well
-     *
-     * @param string $file_name file name of the file to get extension from
-     * @param string $file_type file mime type of the file
-     * @param string $data_URI all the data
-     * @return \Illuminate\Http\UploadedFile
-     */
-    public static function makeUploadFileFromDataURI($file_name, $file_type, $data_URI)
-    {
-        $data = explode(',', $data_URI)[1];
+	/**
+	 * Makes an uploadedFile object.  Used for FilesTableSeeder as well
+	 *
+	 * @param string $file_name file name of the file to get extension from
+	 * @param string $file_type file mime type of the file
+	 * @param string $data_URI all the data
+	 * @param string|null $relative_directory the directory where the file goes relative to UPLOAD_DIRECTORY
+	 * @param boolean $public permission of the file
+	 * @return \Illuminate\Http\UploadedFile
+	 */
+	public static function uploadAndCreateFileFromDataURI($file_name, $file_type, $data_URI, $relative_directory = null, $public = false)
+	{
+		$uploadedFile = self::makeUploadFileFromDataURI($file_name, $file_type, $data_URI);
+		$upload_location = self::upload($uploadedFile, $relative_directory, $public);
+		return self::createFile($file_name, $uploadedFile, $upload_location);
+	}
 
-        file_put_contents('temp', base64_decode($data));
+	/**
+	 * Makes an uploadedFile object.  Used for FilesTableSeeder as well
+	 *
+	 * @param string $file_name file name of the file to get extension from
+	 * @param string $file_type file mime type of the file
+	 * @param string $data_URI all the data
+	 * @return \Illuminate\Http\UploadedFile
+	 */
+	public static function makeUploadFileFromDataURI($file_name, $file_type, $data_URI)
+	{
+		$data = explode(',', $data_URI)[1];
 
-        $ext = pathinfo($file_name, PATHINFO_EXTENSION);
+		file_put_contents('temp', base64_decode($data));
 
-        return new UploadedFile(
-            'temp',
-            uniqid() . '.' . $ext,
-            $file_type,
-            null,
-            false
-        );
-    }
+		$ext = pathinfo($file_name, PATHINFO_EXTENSION);
 
-    /**
-     * Add File model to DB
-     *
-     * @param string $file_name file_name of the file
-     * @param UploadedFile $file
-     * @param string $file_path relative to filesystem root. For S3 the bucket is the filesystem root.
-     * @return mixed
-     */
-    public static function createFile($file_name, UploadedFile $file, $file_path)
-    {
-        // Add to database
-         return self::create([
-            'file_name' => $file_name,
-            'file_type' => $file->getClientMimeType(),
-            'location' => $file_path
-        ]);
-    }
+		return new UploadedFile(
+			'temp',
+			uniqid() . '.' . $ext,
+			$file_type,
+			null,
+			false
+		);
+	}
 
-    /**
-     * Base upload method.
-     *
-     * @param UploadedFile $file
-     * @param string|null $relative_directory
-     * @param bool $public
-     * @return mixed
-     */
-    public static function upload(UploadedFile $file, $relative_directory = null, $public = false)
-    {
-        $filesystem_driver = config('filesystems.default');
+	/**
+	 * Add File model to DB
+	 *
+	 * @param string $file_name file_name of the file
+	 * @param UploadedFile $file
+	 * @param string $file_path relative to filesystem root. For S3 the bucket is the filesystem root.
+	 * @return mixed
+	 */
+	public static function createFile($file_name, UploadedFile $file, $file_path)
+	{
+		// Add to database
+		return self::create([
+			'file_name' => $file_name,
+			'file_type' => $file->getClientMimeType(),
+			'location' => $file_path
+		]);
+	}
 
-        $disk = Storage::disk($filesystem_driver);
+	/**
+	 * Base upload method.
+	 *
+	 * @param UploadedFile $file
+	 * @param string|null $relative_directory
+	 * @param bool $public
+	 * @return mixed
+	 */
+	public static function upload(UploadedFile $file, $relative_directory = null, $public = false)
+	{
+		$filesystem_driver = config('filesystems.default');
 
-        $directory_key = "filesystems.disks.${filesystem_driver}.directory";
-        $directory = config($directory_key) . ($relative_directory
-            ? $relative_directory
-            : '');
+		$disk = Storage::disk($filesystem_driver);
 
-        // Public or private
-        $visibility = $public ? 'public-read' : 'private';
+		$directory_key = "filesystems.disks.${filesystem_driver}.directory";
+		$directory = config($directory_key) . ($relative_directory
+				? $relative_directory
+				: '');
 
-        return $disk->putFileAs($directory, $file, $file->getClientOriginalName(), $visibility);
-    }
+		// Public or private
+		$is_s3 = $filesystem_driver === 's3';
+		$visibility_setting = !$is_s3 ? 'public' : 'public-read';
+		$visibility = $public ? $visibility_setting : 'private';
 
-    /**
-     * Delete an upload from the filesystem
-     *
-     * @param string $file_location
-     * @return bool
-     */
-    public static function deleteUpload($file_location)
-    {
-        $disk = Storage::disk(config('filesystems.default'));
+		return $disk->putFileAs($directory, $file, $file->getClientOriginalName(), $visibility);
+	}
 
-        return $disk->delete($file_location);
-    }
+	/**
+	 * Delete an upload from the filesystem
+	 *
+	 * @param string $file_location
+	 * @return bool
+	 */
+	public static function deleteUpload($file_location)
+	{
+		$disk = Storage::disk(config('filesystems.default'));
 
-    /**
-     * Check that a file exists
-     *
-     * @param $location
-     * @return bool
-     */
-    public static function exists($location)
-    {
-        $disk = Storage::disk(config('filesystems.default'));
+		return $disk->delete($file_location);
+	}
 
-        return $disk->exists($location);
-    }
+	/**
+	 * Check that a file exists
+	 *
+	 * @param $location
+	 * @return bool
+	 */
+	public static function exists($location)
+	{
+		$disk = Storage::disk(config('filesystems.default'));
 
-    //S3 METHODS ONLY
+		return $disk->exists($location);
+	}
 
-    public static function s3CreateUpload(FileModel $file, $file_name, $file_type, $relative_directory = null, $public = false)
-    {
-        $filesystem_driver = config('filesystems.default');
-        if ($filesystem_driver !== 's3')
-        {
-            throw new \Exception("s3 is not the filesystem driver");
-        }
+	//S3 METHODS ONLY
 
-        $ext = pathinfo($file_name, PATHINFO_EXTENSION);
+	/**
+	 * Creates File model and gets authorization to stream directly to S3
+	 *
+	 * @param FileModel $file
+	 * @param string $file_name
+	 * @param string $file_type
+	 * @param null $relative_directory - directory withing your bucket's upload directory to store to
+	 * @param bool $public
+	 * @return array
+	 * @throws \Exception
+	 */
+	public static function s3CreateUpload(FileModel $file, $file_name, $file_type, $relative_directory = null, $public = false)
+	{
+		$filesystem_driver = config('filesystems.default');
+		if ($filesystem_driver !== 's3')
+		{
+			throw new \Exception("s3 is not the filesystem driver");
+		}
 
-        $directory =  config('filesystems.disks.s3.directory') . ($relative_directory
-            ? $relative_directory
-            : '');
+		$ext = pathinfo($file_name, PATHINFO_EXTENSION);
 
-        $file->location = $directory . "/" . uniqid() . "." . $ext;
-        $file->file_name = $file_name;
-        $file->file_type = $file_type;
+		$directory =  config('filesystems.disks.s3.directory') . ($relative_directory
+				? $relative_directory
+				: '');
 
-        $file->save();
+		$file->location = $directory . "/" . uniqid() . "." . $ext;
+		$file->file_name = $file_name;
+		$file->file_type = $file_type;
 
-        $upload_url = $file->s3AuthorizeUploadUrl($public);
+		$file->save();
 
-        return compact('file', 'upload_url');
-    }
+		$upload_url = $file->s3AuthorizeUploadUrl($public);
 
-    public function s3AuthorizeUploadUrl($public = false, $timing = '+24 hours')
-    {
-        $filesystem_driver = config('filesystems.default');
-        if ($filesystem_driver !== 's3')
-        {
-            throw new \Exception("s3 is not the filesystem driver");
-        }
+		return compact('file', 'upload_url');
+	}
 
-        // Public or private
-        $visibility = $public ? 'public-read' : 'private';
+	/**
+	 * Builds authorization to stream to S3
+	 *
+	 * @param bool $public
+	 * @param string $timing
+	 * @return string - URI formatted
+	 * @throws \Exception
+	 */
+	public function s3AuthorizeUploadUrl($public = false, $timing = '+24 hours')
+	{
+		$filesystem_driver = config('filesystems.default');
+		if ($filesystem_driver !== 's3')
+		{
+			throw new \Exception("s3 is not the filesystem driver");
+		}
 
-        $s3Client = AWS::createClient($filesystem_driver);
+		// Public or private
+		$visibility = $public ? 'public-read' : 'private';
 
-        $data = [
-            'Bucket' => config('filesystems.disks.s3.bucket'),
-            'Key' => $this->location,
-            'ACL' => $visibility,
-        ];
+		$s3Client = AWS::createClient($filesystem_driver);
 
-        $cmd = $s3Client->getCommand('PutObject', $data);
+		$data = [
+			'Bucket' => config('filesystems.disks.s3.bucket'),
+			'Key' => $this->location,
+			'ACL' => $visibility,
+		];
 
-        return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
-    }
+		$cmd = $s3Client->getCommand('PutObject', $data);
 
-    public function s3AuthorizeDownloadUrl($attachment = false, $timing = '+5 minutes')
-    {
-        $filesystem_driver = config('filesystems.default');
-        if ($filesystem_driver !== 's3')
-        {
-            throw new \Exception("s3 is not the filesystem driver");
-        }
+		return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
+	}
 
-        $s3Client = AWS::createClient($filesystem_driver);
-        $fileName = $this->file_name;
+	/**
+	 * @param bool $attachment
+	 * @param string $timing
+	 * @return string - URI formatted
+	 * @throws \Exception
+	 */
+	public function s3AuthorizeDownloadUrl($attachment = false, $timing = '+5 minutes')
+	{
+		$filesystem_driver = config('filesystems.default');
+		if ($filesystem_driver !== 's3')
+		{
+			throw new \Exception("s3 is not the filesystem driver");
+		}
 
-        $data = [
-            'Bucket' => config('filesystems.disks.s3.bucket'),
-            'Key' => $this->location,
-            'ResponseContentDisposition' => "attachment; filename=$fileName",
-        ];
+		$s3Client = AWS::createClient($filesystem_driver);
+		$fileName = $this->file_name;
 
-        if (!$attachment)
-        {
-            unset($data['ResponseContentDisposition']);
-        }
+		$data = [
+			'Bucket' => config('filesystems.disks.s3.bucket'),
+			'Key' => $this->location,
+			'ResponseContentDisposition' => "attachment; filename=$fileName",
+		];
 
-        $cmd = $s3Client->getCommand('GetObject', $data);
+		if (!$attachment)
+		{
+			unset($data['ResponseContentDisposition']);
+		}
 
-        return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
-    }
+		$cmd = $s3Client->getCommand('GetObject', $data);
+
+		return $s3Client->createPresignedRequest($cmd, $timing)->getUri()->__toString();
+	}
 }
