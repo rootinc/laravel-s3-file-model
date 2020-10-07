@@ -13,6 +13,8 @@ class FileModelServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        $now_slug = date('Y_m_d_His');
+
         if ($this->app->runningInConsole())
         {
             $this->publishes([
@@ -36,7 +38,7 @@ class FileModelServiceProvider extends ServiceProvider
             ], 'file-factory');
 
             $this->publishes([
-                __DIR__ . '/../templates/2020_03_12_152841_create_files_table.php' => database_path('migrations/2020_03_12_152841_create_files_table.php'),
+                __DIR__ . '/../templates/2020_03_12_152841_create_files_table.php' => database_path("migrations/{$now_slug}_create_files_table.php"),
             ], 'file-table');
         }
     }
