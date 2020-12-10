@@ -14,6 +14,8 @@ class FileBaseControllerTest extends TestCase
 {
 	use RefreshDatabase;
 
+	protected $route_prefix = "api.files.";
+
 	protected function getUserForIndex()
 	{
 		return factory(User::class)->create();
@@ -44,7 +46,7 @@ class FileBaseControllerTest extends TestCase
 	{
 		$files = factory(File::class, 4)->create();
 
-		$response = $this->actingAs($this->getUserForIndex())->json('GET', route('api.files.index'));
+		$response = $this->actingAs($this->getUserForIndex())->json('GET', route($this->route_prefix . 'index'));
 
 		$response->assertStatus(200);
 		$response->assertJson([
@@ -62,7 +64,7 @@ class FileBaseControllerTest extends TestCase
 	{
 		$files = factory(File::class, 4)->create();
 
-		$response = $this->actingAs($this->getUserForIndexError())->json('GET', route('api.files.index'));
+		$response = $this->actingAs($this->getUserForIndexError())->json('GET', route($this->route_prefix . 'index'));
 
 		$response->assertStatus(403);
 		$response->assertJson([
@@ -76,7 +78,7 @@ class FileBaseControllerTest extends TestCase
 	/** @test */
 	public function it_checks_create_works_with_default_filesystem()
 	{
-		$response = $this->actingAs($this->getUserForCreate())->json('POST', route('api.files.store', [
+		$response = $this->actingAs($this->getUserForCreate())->json('POST', route($this->route_prefix . 'store', [
 			'file_name' => 'something cute.png',
 			'file_type' => 'image/png',
 			'file_data' => $this->get1x1RedPixelImage()
@@ -101,7 +103,7 @@ class FileBaseControllerTest extends TestCase
 
 		$file = factory(File::class)->make();
 
-		$response = $this->actingAs($this->getUserForCreate())->json('POST', route('api.files.store', [
+		$response = $this->actingAs($this->getUserForCreate())->json('POST', route($this->route_prefix . 'store', [
 			'file_name' => $file['file_name'],
 			'file_type' => $file['file_type'],
 		]));
@@ -124,7 +126,7 @@ class FileBaseControllerTest extends TestCase
 	{
 		$file = factory(File::class)->create();
 
-		$response = $this->actingAs($this->getUserForUpdate())->json('PUT', route('api.files.update', [
+		$response = $this->actingAs($this->getUserForUpdate())->json('PUT', route($this->route_prefix . 'update', [
 			'file' => $file->id,
 			'file_name' => 'something cute.png',
 			'file_type' => 'image/png',
@@ -151,7 +153,7 @@ class FileBaseControllerTest extends TestCase
 		$original_file = factory(File::class)->create();
 		$update_file = factory(File::class)->make();
 
-		$response = $this->actingAs($this->getUserForCreate())->json('PUT', route('api.files.update', [
+		$response = $this->actingAs($this->getUserForCreate())->json('PUT', route($this->route_prefix . 'update', [
 			'file' => $original_file->id,
 			'file_name' => $update_file['file_name'],
 			'file_type' => $update_file['file_type'],
@@ -176,7 +178,7 @@ class FileBaseControllerTest extends TestCase
 	{
 		$file = factory(File::class)->create();
 
-		$response = $this->actingAs($this->getUserForDelete())->json('DELETE', route('api.files.destroy', [
+		$response = $this->actingAs($this->getUserForDelete())->json('DELETE', route($this->route_prefix . 'destroy', [
 			'file' => $file->id
 		]));
 

@@ -132,9 +132,7 @@ class FileModel extends Model
 				: '');
 
 		// Public or private
-		$is_s3 = $filesystem_driver === 's3';
-		$visibility_setting = !$is_s3 ? 'public' : 'public-read';
-		$visibility = $public ? $visibility_setting : 'private';
+		$visibility = $public ? 'public' : 'private';
 
 		return $disk->putFileAs($directory, $file, $file->getClientOriginalName(), $visibility);
 	}
