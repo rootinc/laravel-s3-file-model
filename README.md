@@ -19,6 +19,93 @@ protected function get1x1RedPixelImage()
 7. Update routing.  We can use this as an example: `Route::apiResource('files', 'FileController')->only(['index', 'store', 'update', 'destroy']);`
 8. :tada:
 
+## Update from 0.1.* to 0.2.*
+
+If we are using API versioning paradigm, 0.2.* lets us abstract the file model so that in a child class, we can import a different version of the File.
+
+For example, our `FileController` would look something like this:
+
+```
+<?php
+
+namespace App\Http\Controllers\Api\v3;
+
+use RootInc\LaravelS3FileModel\FileBaseController;
+
+use ReflectionClass;
+
+use App\Models\v3\File;
+
+class FileController extends FileBaseController
+{
+    protected static function getFileModel()
+    {
+        $rc = new ReflectionClass(File::class);
+        return $rc->newInstance();
+    }
+...
+```
+
+Now when running the parent's functionality, it will make use of the right model.
+
+Note -- the FileController's `update` and `delete` methods have been switched from `public function method(Request $request, File $file)` to `public function method(Request $request, $file_id)`
+
+The same has been updated for tests.  That way, if we want to make use of Laravel 8's updated factory classes, we can do so like below:
+
+```
+<?php
+
+namespace Tests\Unit\v2;
+
+use RootInc\LaravelS3FileModel\FileModelTest;
+
+use Tests\DatabaseMigrationsUpTo;
+
+use ReflectionClass;
+
+use App\Models\v2\File;
+
+class FileTest extends FileModelTest
+{
+    use DatabaseMigrationsUpTo;
+
+    protected static function getFileModel()
+    {
+        $rc = new ReflectionClass(File::class);
+        return $rc->newInstance();
+    }
+
+    protected function getFileFactory($count=1, $create=true, $properties=[])
+    {
+        $files;
+
+        $factory = File::factory()->count($count);
+        if ($create)
+        {
+            $files = $factory->create($properties);
+        }
+        else
+        {
+            $files = $factory->make($properties);
+        }
+
+        $len = count($files);
+        if ($len === 1)
+        {
+            return $files[0];
+        }
+        else if ($len === 0)
+        {
+            return null;
+        }
+        else
+        {
+            return $files;
+        }
+    }
+...
+```
+
 ## Example React FileUploader
 
 ```
