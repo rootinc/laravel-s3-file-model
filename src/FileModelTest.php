@@ -4,7 +4,8 @@ namespace RootInc\LaravelS3FileModel;
 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use ReflectionClass;
 
 use Tests\TestCase;
 
@@ -12,10 +13,45 @@ use App\File;
 
 class FileModelTest extends TestCase
 {
+    protected static function getFileModel()
+    {
+        $rc = new ReflectionClass(File::class);
+        return $rc->newInstance();
+    }
+
+    protected function getFileFactory($count=1, $create=true, $properties=[])
+    {
+        $files;
+
+        $factory = factory(File::class, $count);
+        if ($create)
+        {
+            $files = $factory->create($properties);
+        }
+        else
+        {
+            $files = $factory->make($properties);
+        }
+
+        $len = count($files);
+        if ($len === 1)
+        {
+            return $files[0];
+        }
+        else if ($len === 0)
+        {
+            return null;
+        }
+        else
+        {
+            return $files;
+        }
+    }
+
     /** @test */
     public function it_has_the_proper_fields()
     {
-        $file = factory(File::class)->create([
+        $file = $this->getFileFactory(1, true, [
             "file_name" => "asdf.pdf",
             "title" => "fdsa",
             "file_type" => "application/pdf",
@@ -35,7 +71,7 @@ class FileModelTest extends TestCase
     /** @test */
     public function getTitleAttribute_returns_title()
     {
-        $file = factory(File::class)->create([
+        $file = $this->getFileFactory(1, true, [
             'file_name' => "Rabbits.pdf",
             'title' => "Rabbits"
         ]);
@@ -46,7 +82,7 @@ class FileModelTest extends TestCase
     /** @test */
     public function getFullUrlAttribute_returns_true_for_a_valid_file()
     {
-        $file = factory(File::class)->create([
+        $file = $this->getFileFactory(1, true, [
             'location' => config('filesystems.default') . '/somefile.jpg'
         ]);
 
@@ -146,7 +182,7 @@ class FileModelTest extends TestCase
 
         $this->expectException(\Exception::class);
 
-        $data = File::s3CreateUpload($file, 'dog.png', 'image/png');
+        $data = static::getFileModel()->s3CreateUpload($file, 'dog.png', 'image/png');
     }
 
     /** @test */
@@ -157,7 +193,7 @@ class FileModelTest extends TestCase
 
         $file = new FileModel();
 
-        $data = File::s3CreateUpload($file, 'dog.png', 'image/png');
+        $data = static::getFileModel()->s3CreateUpload($file, 'dog.png', 'image/png');
 
         $file->refresh();
 
@@ -171,7 +207,7 @@ class FileModelTest extends TestCase
         //force to local for this test
         config(['filesystems.default' => 'local']);
 
-        $file = factory(File::class)->create();
+        $file = $this->getFileFactory();
 
         $this->expectException(\Exception::class);
 
@@ -184,7 +220,7 @@ class FileModelTest extends TestCase
         //force to s3 for this test
         config(['filesystems.default' => 's3']);
 
-        $file = factory(File::class)->create();
+        $file = $this->getFileFactory();
 
         $str = $file->s3AuthorizeUploadUrl();
 
@@ -197,7 +233,7 @@ class FileModelTest extends TestCase
         //force to local for this test
         config(['filesystems.default' => 'local']);
 
-        $file = factory(File::class)->create();
+        $file = $this->getFileFactory();
 
         $this->expectException(\Exception::class);
 
@@ -210,7 +246,7 @@ class FileModelTest extends TestCase
         //force to s3 for this test
         config(['filesystems.default' => 's3']);
 
-        $file = factory(File::class)->create();
+        $file = $this->getFileFactory();
 
         $str = $file->s3AuthorizeDownloadUrl();
 
