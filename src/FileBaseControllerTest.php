@@ -2,19 +2,48 @@
 
 namespace RootInc\LaravelS3FileModel;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 use App\File;
 use App\User;
 
 class FileBaseControllerTest extends TestCase
 {
-	use RefreshDatabase;
-
 	protected $route_prefix = "api.files.";
+
+	protected function getFileFactory($count=1, $create=true, $properties=[])
+	{
+		$files;
+
+		$factory = factory(File::class, $count);
+		if ($create)
+		{
+			$files = $factory->create($properties);
+		}
+		else
+		{
+			$files = $factory->make($properties);
+		}
+
+		$len = count($files);
+		if ($len === 1)
+		{
+			return $files[0];
+		}
+		else if ($len === 0)
+		{
+			return null;
+		}
+		else
+		{
+			return $files;
+		}
+	}
+
+	protected function getFirstFile()
+	{
+		return File::first();
+	}
 
 	protected function getUserForIndex()
 	{
@@ -44,7 +73,7 @@ class FileBaseControllerTest extends TestCase
 	/** @test */
 	public function it_checks_if_index_work()
 	{
-		$files = factory(File::class, 4)->create();
+		$files = $this->getFileFactory(4);
 
 		$response = $this->actingAs($this->getUserForIndex())->json('GET', route($this->route_prefix . 'index'));
 
@@ -62,7 +91,7 @@ class FileBaseControllerTest extends TestCase
 	/** @test */
 	public function it_checks_if_index_gives_error()
 	{
-		$files = factory(File::class, 4)->create();
+		$files = $this->getFileFactory(4);
 
 		$response = $this->actingAs($this->getUserForIndexError())->json('GET', route($this->route_prefix . 'index'));
 
@@ -84,7 +113,7 @@ class FileBaseControllerTest extends TestCase
 			'file_data' => $this->get1x1RedPixelImage()
 		]));
 
-		$file = File::first();
+		$file = $this->getFirstFile();
 
 		$response->assertStatus(200);
 		$response->assertJson([
@@ -101,7 +130,7 @@ class FileBaseControllerTest extends TestCase
 		//force to s3 for this test
 		config(['filesystems.default' => 's3']);
 
-		$file = factory(File::class)->make();
+		$file = $this->getFileFactory(1, false);
 
 		$response = $this->actingAs($this->getUserForCreate())->json('POST', route($this->route_prefix . 'store', [
 			'file_name' => $file['file_name'],
@@ -124,7 +153,7 @@ class FileBaseControllerTest extends TestCase
 	/** @test */
 	public function it_checks_update_works_for_default_filesystem()
 	{
-		$file = factory(File::class)->create();
+		$file = $this->getFileFactory();
 
 		$response = $this->actingAs($this->getUserForUpdate())->json('PUT', route($this->route_prefix . 'update', [
 			'file' => $file->id,
@@ -150,8 +179,8 @@ class FileBaseControllerTest extends TestCase
 		//force to s3 for this test
 		config(['filesystems.default' => 's3']);
 
-		$original_file = factory(File::class)->create();
-		$update_file = factory(File::class)->make();
+		$original_file = $this->getFileFactory();
+		$update_file = $this->getFileFactory(1, false);
 
 		$response = $this->actingAs($this->getUserForCreate())->json('PUT', route($this->route_prefix . 'update', [
 			'file' => $original_file->id,
@@ -176,7 +205,7 @@ class FileBaseControllerTest extends TestCase
 	/** @test */
 	public function it_checks_delete_works()
 	{
-		$file = factory(File::class)->create();
+		$file = $this->getFileFactory();
 
 		$response = $this->actingAs($this->getUserForDelete())->json('DELETE', route($this->route_prefix . 'destroy', [
 			'file' => $file->id
