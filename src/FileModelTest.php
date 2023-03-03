@@ -5,6 +5,7 @@ namespace RootInc\LaravelS3FileModel;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 
+use League\Flysystem\UnableToCheckFileExistence;
 use ReflectionClass;
 
 use Tests\TestCase;
@@ -100,12 +101,15 @@ class FileModelTest extends TestCase
     }
 
     /** @test */
-    public function exists_returns_false_with_invalid_file()
+    public function exists_throws_exception_with_invalid_file()
     {
-        $file = new FileModel();
-
-        $value = FileModel::exists("chickenasdf.jpg");
-        $this->assertFalse($value);
+        try {
+            FileModel::exists("chickenasdf.jpg");
+            $this->fail('Expected exception to be thrown due to missing file');
+        } catch (UnableToCheckFileExistence $e) {
+            $causingException = $e->getPrevious();
+            $this->assertTrue(str_contains($causingException->getMessage(), '403 Forbidden'));
+        }
     }
 
     /** @test */
@@ -168,8 +172,13 @@ class FileModelTest extends TestCase
 
         FileModel::deleteUpload($file->location);
 
-        $value = FileModel::exists($file->location);
-        $this->assertFalse($value);
+        try {
+            FileModel::exists("chickenasdf.jpg");
+            $this->fail('Expected exception to be thrown due to missing file');
+        } catch (UnableToCheckFileExistence $e) {
+            $causingException = $e->getPrevious();
+            $this->assertTrue(str_contains($causingException->getMessage(), '403 Forbidden'));
+        }
     }
 
     /** @test */

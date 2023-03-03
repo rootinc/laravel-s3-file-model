@@ -126,7 +126,7 @@ class FileModel extends Model
 
 		$disk = Storage::disk($filesystem_driver);
 
-		$directory_key = "filesystems.disks.${filesystem_driver}.directory";
+		$directory_key = "filesystems.disks.{$filesystem_driver}.directory";
 		$directory = config($directory_key) . ($relative_directory
 				? $relative_directory
 				: '');
