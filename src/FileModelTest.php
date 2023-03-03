@@ -101,7 +101,7 @@ class FileModelTest extends TestCase
     }
 
     /** @test */
-    public function exists_returns_false_with_invalid_file()
+    public function exists_throws_exception_with_invalid_file()
     {
         try {
             FileModel::exists("chickenasdf.jpg");
